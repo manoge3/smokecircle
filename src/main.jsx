@@ -4,6 +4,23 @@ import { groupsData, peopleData, productsData } from "./mockData";
 import "./styles.css";
 
 const tabs = ["Pessoas", "Grupos", "Mapa", "Acessórios", "Perfil"];
+const preferenceOptions = [
+  "Praia",
+  "Fotografia",
+  "Música",
+  "Rolê tranquilo",
+  "Conversa",
+  "Facul",
+  "Arte",
+  "Skate",
+  "Noite",
+  "Natureza",
+  "Grupo pequeno",
+  "Grupo grande",
+  "Pessoas",
+  "Grupos",
+  "Acessórios",
+];
 
 function Logo({ stacked = false }) {
   return (
@@ -29,6 +46,7 @@ function App() {
   const [productFilters, setProductFilters] = useState([]);
   const [requestedGroups, setRequestedGroups] = useState([]);
   const [savedProducts, setSavedProducts] = useState([]);
+  const [selectedPreferences, setSelectedPreferences] = useState(["Praia", "Fotografia", "Rolê tranquilo"]);
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
 
@@ -100,7 +118,7 @@ function App() {
       </aside>
 
       <main className="shell">
-        <Header tab={tab} notify={notify} />
+        <Header tab={tab} setTab={setTab} notify={notify} />
         {tab === "Pessoas" && (
           <PeopleTab
             people={people}
@@ -142,6 +160,8 @@ function App() {
           <ProfileTab
             savedProducts={savedProducts}
             requestedGroups={requestedGroups}
+            selectedPreferences={selectedPreferences}
+            setSelectedPreferences={setSelectedPreferences}
             setModal={setModal}
             notify={notify}
             leave={() => setEntered(false)}
@@ -160,7 +180,7 @@ function iconFor(tab) {
   return { Pessoas: "◎", Grupos: "◌", Mapa: "⌖", Acessórios: "◇", Perfil: "●" }[tab];
 }
 
-function Header({ tab, notify }) {
+function Header({ tab, setTab, notify }) {
   return (
     <header className="topbar">
       <div>
@@ -168,7 +188,7 @@ function Header({ tab, notify }) {
         <h2>{tab}</h2>
         <p className="muted">Ver quem está por perto, entrar na roda e trocar ideia com localização protegida.</p>
       </div>
-      <button className="secondary" onClick={() => notify("Preferências do visitante atualizadas no protótipo.")}>Preferências</button>
+      <button className="secondary preferenceShortcut" onClick={() => { setTab("Perfil"); notify("Abra sua vibe e ajuste as preferências."); }}>Preferências</button>
     </header>
   );
 }
@@ -438,7 +458,47 @@ function ProductCard({ product, saved, onSave, onDetails }) {
   );
 }
 
-function ProfileTab({ savedProducts, requestedGroups, setModal, notify, leave }) {
+function PreferenceChip({ label, active, onClick }) {
+  return (
+    <button className={active ? "preferenceChip active" : "preferenceChip"} onClick={onClick} aria-pressed={active}>
+      <span>{active ? "✓" : "+"}</span>
+      {label}
+    </button>
+  );
+}
+
+function PreferencesSection({ selectedPreferences, setSelectedPreferences, notify }) {
+  const togglePreference = (preference) => {
+    setSelectedPreferences((items) => {
+      const active = items.includes(preference);
+      const next = active ? items.filter((item) => item !== preference) : [...items, preference];
+      notify(active ? `${preference} saiu da sua vibe.` : `${preference} entrou na sua vibe.`);
+      return next;
+    });
+  };
+
+  return (
+    <article className="card preferencePanel">
+      <div className="preferenceIntro">
+        <p className="eyebrow">Perfil visitante</p>
+        <h3>Sua vibe</h3>
+        <p className="muted">Escolha o que mais combina com você. Dá para marcar várias preferências ao mesmo tempo.</p>
+      </div>
+      <div className="preferenceGrid">
+        {preferenceOptions.map((preference) => (
+          <PreferenceChip
+            key={preference}
+            label={preference}
+            active={selectedPreferences.includes(preference)}
+            onClick={() => togglePreference(preference)}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function ProfileTab({ savedProducts, requestedGroups, selectedPreferences, setSelectedPreferences, setModal, notify, leave }) {
   return (
     <section className="section fade">
       <div className="profileHero card">
@@ -446,9 +506,10 @@ function ProfileTab({ savedProducts, requestedGroups, setModal, notify, leave })
         <div>
           <h2>Visitante</h2>
           <p>Santos, SP · modo visitante</p>
-          <p className="muted">Preferências: praia, rolê tranquilo, grupos abertos e localização aproximada.</p>
+          <p className="muted">Preferências: {selectedPreferences.length ? selectedPreferences.join(", ") : "escolha sua vibe abaixo"}.</p>
         </div>
       </div>
+      <PreferencesSection selectedPreferences={selectedPreferences} setSelectedPreferences={setSelectedPreferences} notify={notify} />
       <div className="profileGrid">
         <article className="card profilePanel"><h3>Resumo</h3><p>{requestedGroups.length} solicitações de grupos</p><p>{savedProducts.length} acessórios salvos</p><p>Distância máxima: 6 km</p></article>
         <article className="card profilePanel"><h3>Privacidade</h3><p>Localização sempre aproximada.</p><p>O local exato só é liberado pelo criador do grupo.</p></article>

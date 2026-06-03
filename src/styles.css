@@ -73,7 +73,7 @@ h1, h2, h3, p { margin-top: 0; }
 .app { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
 .sidebar { position: sticky; top: 0; height: 100vh; padding: 28px 20px; border-right: 1px solid var(--line); background: rgba(255,250,242,0.78); backdrop-filter: blur(20px); }
 .sidebar nav { display: grid; gap: 9px; margin-top: 32px; }
-.sidebar button, .bottomNav button, .secondary, .chip, .actions button, .save, .floatingCard button, .profilePanel button {
+.sidebar button, .bottomNav button, .secondary, .chip, .preferenceChip, .actions button, .save, .floatingCard button, .profilePanel button {
   border: 1px solid var(--line);
   color: var(--ink);
   background: rgba(255,255,255,0.64);
@@ -107,6 +107,7 @@ h1, h2, h3, p { margin-top: 0; }
 .panel h1 { margin-bottom: 8px; font-size: clamp(30px, 4vw, 48px); letter-spacing: -0.05em; line-height: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .chip { white-space: nowrap; }
+.preferenceShortcut { font-weight: 750; }
 .primary {
   border: 0;
   color: #fff;
@@ -116,8 +117,8 @@ h1, h2, h3, p { margin-top: 0; }
   box-shadow: 0 14px 30px rgba(201,101,45,0.22);
   transition: transform .18s ease, box-shadow .18s ease;
 }
-.primary:hover, .secondary:hover, .actions button:hover, .save:hover, .profilePanel button:hover { transform: translateY(-1px); }
-.primary:active, .secondary:active, .actions button:active, .chip:active { transform: scale(0.98); }
+.primary:hover, .secondary:hover, .actions button:hover, .save:hover, .profilePanel button:hover, .preferenceChip:hover { transform: translateY(-1px); }
+.primary:active, .secondary:active, .actions button:active, .chip:active, .preferenceChip:active { transform: scale(0.98); }
 .big { min-height: 52px; padding-inline: 24px; font-weight: 800; }
 
 .swipeLayout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
@@ -171,6 +172,46 @@ h1, h2, h3, p { margin-top: 0; }
 .profileGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .profilePanel { padding: 20px; display: grid; gap: 10px; }
 .profilePanel button { text-align: left; }
+.preferencePanel { display: grid; grid-template-columns: minmax(220px, .55fr) 1fr; gap: 18px; align-items: start; padding: 22px; overflow: visible; }
+.preferenceIntro h3 { margin-bottom: 8px; font-size: clamp(26px, 4vw, 38px); letter-spacing: -0.05em; }
+.preferenceGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.preferenceChip {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  border-radius: 18px;
+  padding: 12px 13px;
+  text-align: left;
+  font-weight: 750;
+  color: #3c352e;
+  background: linear-gradient(180deg, #fffdf8, #fff7ee);
+  box-shadow: 0 8px 18px rgba(79,58,38,0.07);
+}
+.preferenceChip span {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--green);
+  background: var(--green-soft);
+  font-size: 12px;
+  transition: transform .2s ease, background .2s ease, color .2s ease;
+}
+.preferenceChip.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+  box-shadow: 0 14px 30px rgba(201,101,45,0.24);
+}
+.preferenceChip.active span {
+  color: #245c2d;
+  background: #eff8e9;
+  transform: rotate(-6deg) scale(1.05);
+}
 .safetyStrip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 15px 18px; color: var(--muted); }
 .safetyStrip strong { color: var(--ink); }
 .safetyStrip button { border: 1px solid var(--line); border-radius: 999px; padding: 8px 11px; background: #fff; color: var(--ink); }
@@ -199,6 +240,7 @@ h1, h2, h3, p { margin-top: 0; }
   .bottomNav button.active { color: var(--orange-dark); background: #fff; border-color: rgba(201,101,45,0.34); }
   .grid, .productGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .swipeLayout, .mapLayout { grid-template-columns: 1fr; }
+  .preferencePanel { grid-template-columns: 1fr; }
   .mapMock { min-height: 460px; }
 }
 
@@ -217,6 +259,7 @@ h1, h2, h3, p { margin-top: 0; }
   .chips { justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
   .chip { flex: 0 0 auto; }
   .grid, .productGrid, .profileGrid { grid-template-columns: 1fr; }
+  .preferenceGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .personCard img { height: 430px; }
   .card img { height: 240px; }
   .actions { display: grid; grid-template-columns: 1fr 1fr; }
@@ -231,4 +274,5 @@ h1, h2, h3, p { margin-top: 0; }
   .bottomNav button small { font-size: 9px; }
   .personCard img { height: 370px; }
   .actions { grid-template-columns: 1fr; }
+  .preferenceGrid { grid-template-columns: 1fr; }
 }
