@@ -1,313 +1,556 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { accessoriesSeed, circlesSeed, groupsSeed, peopleSeed } from "./mockData";
+import { groupsData, peopleData, productsData } from "./mockData";
 import "./styles.css";
 
-const navItems = ["Descobrir", "Círculos", "Acessórios", "Perfil"];
+const tabs = ["Pessoas", "Grupos", "Mapa", "Acessórios", "Perfil"];
 
-function Logo({ compact = false }) {
+function Logo({ stacked = false }) {
   return (
-    <div className={compact ? "logo compactLogo" : "logo"}>
-      <span className="logoMark" aria-hidden="true">
-        <svg viewBox="0 0 48 48" role="img">
-          <path d="M24 7c8 7 13 14 13 22 0 7-5 12-13 12S11 36 11 29C11 21 16 14 24 7Z" fill="#7fbd74" />
-          <path d="M24 11v26M17 24c4 1 6 3 7 7M31 22c-4 2-6 5-7 10" stroke="#123018" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+    <div className={stacked ? "logo logoStacked" : "logo"}>
+      <span className="logoIcon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path d="M24 7c8 7 13 14 13 22 0 7-5 12-13 12S11 36 11 29C11 21 16 14 24 7Z" fill="#4f8f45" />
+          <path d="M24 11v26M17 24c4 1 6 3 7 7M31 22c-4 2-6 5-7 10" stroke="#173b1e" strokeWidth="2.5" strokeLinecap="round" fill="none" />
         </svg>
       </span>
-      {!compact && <strong>Smoke Circle</strong>}
+      <strong>Smoke Circle</strong>
     </div>
   );
 }
 
-function iconFor(item) {
-  return { Descobrir: "⌕", Círculos: "◎", Acessórios: "◇", Perfil: "◐" }[item];
-}
-
 function App() {
-  const [tab, setTab] = useState("Descobrir");
-  const [mode, setMode] = useState("Ambos");
-  const [filters, setFilters] = useState({ online: false, active: false, distance: "4 km", interest: "Todos" });
-  const [people, setPeople] = useState(peopleSeed.map((person, index) => ({ ...person, id: `p${index}` })));
-  const [groups, setGroups] = useState(groupsSeed.map((group, index) => ({ ...group, id: `g${index}` })));
-  const [circles, setCircles] = useState(circlesSeed.map((circle, index) => ({ ...circle, id: `c${index}` })));
-  const [saved, setSaved] = useState([]);
-  const [toast, setToast] = useState("");
+  const [entered, setEntered] = useState(false);
+  const [tab, setTab] = useState("Pessoas");
+  const [people, setPeople] = useState(peopleData);
+  const [personIndex, setPersonIndex] = useState(0);
+  const [personFilters, setPersonFilters] = useState([]);
+  const [groupFilters, setGroupFilters] = useState([]);
+  const [productFilters, setProductFilters] = useState([]);
+  const [requestedGroups, setRequestedGroups] = useState([]);
+  const [savedProducts, setSavedProducts] = useState([]);
   const [modal, setModal] = useState(null);
-  const [chat, setChat] = useState(null);
-  const [accessoryFilter, setAccessoryFilter] = useState("Todos");
-  const [query, setQuery] = useState("");
+  const [toast, setToast] = useState("");
 
   const notify = (message) => {
     setToast(message);
     window.clearTimeout(window.__smokeToast);
-    window.__smokeToast = window.setTimeout(() => setToast(""), 2400);
+    window.__smokeToast = window.setTimeout(() => setToast(""), 2600);
   };
 
-  const visiblePeople = people.filter((person) => {
-    const onlineOk = !filters.online || person.status === "Online agora";
-    const activeOk = !filters.active || person.status.includes("círculo");
-    const interestOk = filters.interest === "Todos" || person.tags.join(" ").toLowerCase().includes(filters.interest.toLowerCase());
-    return onlineOk && activeOk && interestOk;
-  });
+  const enter = (nextTab = "Pessoas") => {
+    setTab(nextTab);
+    setEntered(true);
+  };
 
-  const visibleAccessories = accessoriesSeed.filter((item) => {
-    const categoryOk = accessoryFilter === "Todos" || item[1] === accessoryFilter;
-    const searchText = `${item[0]} ${item[1]} ${item[2]} ${item[3].join(" ")}`.toLowerCase();
-    return categoryOk && searchText.includes(query.toLowerCase());
-  });
+  if (!entered) {
+    return (
+      <main className="landing">
+        <div className="landingShell">
+          <header className="landingTop">
+            <Logo />
+            <span>Localização sempre aproximada</span>
+          </header>
+          <section className="landingHero">
+            <div className="heroCopy">
+              <p className="eyebrow">Demo social para adultos</p>
+              <h1>Encontre sua roda</h1>
+              <p>Descubra pessoas, grupos e círculos próximos para trocar ideia.</p>
+              <div className="heroActions">
+                <button className="primary big" onClick={() => enter("Pessoas")}>Explorar agora</button>
+                <button className="secondary big" onClick={() => enter("Grupos")}>Ver grupos perto de mim</button>
+              </div>
+              <p className="safetyLine">O local exato só é liberado pelo criador do grupo. Use com responsabilidade e respeite as leis locais.</p>
+            </div>
+            <div className="heroPreview" aria-label="Prévia do app Smoke Circle">
+              <div className="previewCard raised">
+                <span className="statusDot" />
+                <strong>Sunset Gonzaga</strong>
+                <small>1,1 km · 18 pessoas · aberto</small>
+              </div>
+              <div className="previewMap">
+                <span className="pin p1" />
+                <span className="pin p2" />
+                <span className="pin p3" />
+              </div>
+              <div className="previewCard">
+                <strong>Marina, 24</strong>
+                <small>Fotografia · Praia · Rolê tranquilo</small>
+              </div>
+            </div>
+          </section>
+        </div>
+        {toast && <Toast message={toast} />}
+      </main>
+    );
+  }
 
   return (
     <div className="app">
       <aside className="sidebar">
-        <Logo />
-        <nav>{navItems.map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{iconFor(item)}{item}</button>)}</nav>
-        <p className="adult">Para adultos. Sem venda, sem pagamento e sem autenticação real. Use com responsabilidade e respeite as leis locais.</p>
+        <Logo stacked />
+        <nav>
+          {tabs.map((item) => (
+            <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+              {iconFor(item)} <span>{item}</span>
+            </button>
+          ))}
+        </nav>
+        <p className="adultNote">Para adultos. Vitrine demo, sem checkout e sem venda de substâncias. O app usa localização aproximada.</p>
       </aside>
 
       <main className="shell">
-        <header className="topbar">
-          <div className="topBrand">
-            <Logo compact />
-            <div>
-              <strong className="topBrandName">Smoke Circle</strong>
-              <p className="eyebrow">São Paulo · raio social de 4 km</p>
-              <h1>{tab}</h1>
-              <p className="topCopy">Veja quem está por perto pra trocar ideia, entrar na roda ou puxar um trago com respeito.</p>
-            </div>
-          </div>
-          <button className="pill" onClick={() => notify("Preferências salvas aqui no protótipo.")}>Preferências</button>
-        </header>
-
-        {tab === "Descobrir" && (
-          <Discover mode={mode} setMode={setMode} filters={filters} setFilters={setFilters} people={visiblePeople} groups={groups} setPeople={setPeople} setGroups={setGroups} setModal={setModal} setChat={setChat} notify={notify} />
+        <Header tab={tab} notify={notify} />
+        {tab === "Pessoas" && (
+          <PeopleTab
+            people={people}
+            setPeople={setPeople}
+            personIndex={personIndex}
+            setPersonIndex={setPersonIndex}
+            filters={personFilters}
+            setFilters={setPersonFilters}
+            setModal={setModal}
+            notify={notify}
+          />
         )}
-        {tab === "Círculos" && <Circles circles={circles} setCircles={setCircles} setModal={setModal} setChat={setChat} notify={notify} />}
-        {tab === "Acessórios" && <Accessories items={visibleAccessories} filter={accessoryFilter} setFilter={setAccessoryFilter} query={query} setQuery={setQuery} saved={saved} setSaved={setSaved} setModal={setModal} notify={notify} />}
-        {tab === "Perfil" && <Profile saved={saved} circles={circles} people={people} notify={notify} setTab={setTab} />}
+        {tab === "Grupos" && (
+          <GroupsTab
+            groups={groupsData}
+            filters={groupFilters}
+            setFilters={setGroupFilters}
+            requestedGroups={requestedGroups}
+            setRequestedGroups={setRequestedGroups}
+            setModal={setModal}
+            notify={notify}
+          />
+        )}
+        {tab === "Mapa" && (
+          <MapTab groups={groupsData} setTab={setTab} setModal={setModal} requestedGroups={requestedGroups} />
+        )}
+        {tab === "Acessórios" && (
+          <AccessoriesTab
+            products={productsData}
+            filters={productFilters}
+            setFilters={setProductFilters}
+            savedProducts={savedProducts}
+            setSavedProducts={setSavedProducts}
+            setModal={setModal}
+            notify={notify}
+          />
+        )}
+        {tab === "Perfil" && (
+          <ProfileTab
+            savedProducts={savedProducts}
+            requestedGroups={requestedGroups}
+            setModal={setModal}
+            notify={notify}
+            leave={() => setEntered(false)}
+          />
+        )}
       </main>
 
-      <nav className="bottomNav">{navItems.map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{iconFor(item)}<small>{item}</small></button>)}</nav>
-      {toast && <div className="toast">{toast}</div>}
-      {modal && <Modal modal={modal} close={() => setModal(null)} setGroups={setGroups} setCircles={setCircles} setChat={setChat} notify={notify} />}
-      {chat && <Chat chat={chat} close={() => setChat(null)} />}
+      <BottomNav tab={tab} setTab={setTab} />
+      {modal && <AppModal modal={modal} close={() => setModal(null)} notify={notify} />}
+      {toast && <Toast message={toast} />}
     </div>
   );
 }
 
-function Discover({ mode, setMode, filters, setFilters, people, groups, setPeople, setGroups, setModal, setChat, notify }) {
-  const showPeople = mode !== "Grupos";
-  const showGroups = mode !== "Pessoas";
-  const passPerson = (id) => {
-    setPeople((list) => list.filter((person) => person.id !== id));
-    notify("Passou. Bora ver o próximo perfil.");
+function iconFor(tab) {
+  return { Pessoas: "◎", Grupos: "◌", Mapa: "⌖", Acessórios: "◇", Perfil: "●" }[tab];
+}
+
+function Header({ tab, notify }) {
+  return (
+    <header className="topbar">
+      <div>
+        <p className="eyebrow">Smoke Circle · Baixada Santista</p>
+        <h2>{tab}</h2>
+        <p className="muted">Ver quem está por perto, entrar na roda e trocar ideia com localização protegida.</p>
+      </div>
+      <button className="secondary" onClick={() => notify("Preferências do visitante atualizadas no protótipo.")}>Preferências</button>
+    </header>
+  );
+}
+
+function BottomNav({ tab, setTab }) {
+  return (
+    <nav className="bottomNav">
+      {tabs.map((item) => (
+        <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+          <span>{iconFor(item)}</span>
+          <small>{item}</small>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function FilterChips({ options, selected, onToggle }) {
+  return (
+    <div className="chips">
+      {options.map((option) => (
+        <button key={option} className={selected.includes(option) ? "chip active" : "chip"} onClick={() => onToggle(option)}>
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function toggleOption(list, option) {
+  return list.includes(option) ? list.filter((item) => item !== option) : [...list, option];
+}
+
+function PeopleTab({ people, setPeople, personIndex, setPersonIndex, filters, setFilters, setModal, notify }) {
+  const filtered = useMemo(() => filterPeople(people, filters), [people, filters]);
+  const current = filtered[personIndex % Math.max(filtered.length, 1)];
+
+  const nextCard = () => setPersonIndex((index) => (index + 1) % Math.max(filtered.length, 1));
+  const like = () => {
+    notify("Você curtiu este perfil");
+    nextCard();
   };
-  const likePerson = (person) => {
-    if (person.matched) setModal({ type: "match", person });
-    else notify(`Você curtiu ${person.name}. Se rolar match, o papo abre.`);
-  };
-  const requestGroup = (group, joined = false) => {
-    setGroups((list) => list.map((item) => item.id === group.id ? { ...item, status: joined ? "Em conversa" : "Solicitado" } : item));
-    setModal({ type: "join", target: group.name, joined });
+  const pass = () => {
+    notify("Perfil pulado. Bora ver o próximo.");
+    nextCard();
   };
 
   return (
     <section className="section fade">
-      <div className="heroPanel brandPanel">
-        <div>
-          <p className="eyebrow">Descobrir</p>
-          <h2>Encontre pessoas e grupos na sua vibe.</h2>
-          <p className="muted">Dá pra ver quem está por perto, pedir entrada e chamar no papo sem revelar localização exata de cara.</p>
+      <Panel title="Pessoas por perto" text="Cards em modo visitante para achar uma resenha com respeito.">
+        <FilterChips
+          options={["Até 4 km", "Online agora", "Rolê tranquilo", "Faculdade", "Praia"]}
+          selected={filters}
+          onToggle={(option) => {
+            setPersonIndex(0);
+            setFilters(toggleOption(filters, option));
+          }}
+        />
+      </Panel>
+      {current ? (
+        <div className="swipeLayout">
+          <PersonCard person={current} onLike={like} onPass={pass} onProfile={() => setModal({ type: "person", item: current })} onMessage={() => setModal({ type: "message", title: `Mandar ideia para ${current.name}`, body: "Mensagem simulada aberta. No produto real, isso viraria um chat depois do match." })} />
+          <div className="sideList">
+            <h3>Também na área</h3>
+            {filtered.slice(0, 5).map((person) => (
+              <button key={person.id} onClick={() => setPersonIndex(filtered.findIndex((item) => item.id === person.id))}>
+                <img src={person.photo} alt={person.name} />
+                <span>{person.name}<small>{person.distance.toFixed(1).replace(".", ",")} km · {person.area}</small></span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="segmented">{["Pessoas", "Grupos", "Ambos"].map((item) => <button className={mode === item ? "active" : ""} onClick={() => setMode(item)} key={item}>{item}</button>)}</div>
-      </div>
-      <div className="filters">
-        <label>Distância<select value={filters.distance} onChange={(event) => setFilters({ ...filters, distance: event.target.value })}><option>2 km</option><option>4 km</option><option>8 km</option></select></label>
-        <label>Interesses<select value={filters.interest} onChange={(event) => setFilters({ ...filters, interest: event.target.value })}><option>Todos</option><option>Design</option><option>Lounge</option><option>Uso legal</option><option>Papo</option></select></label>
-        <button className={filters.online ? "chip active" : "chip"} onClick={() => setFilters({ ...filters, online: !filters.online })}>Online agora</button>
-        <button className={filters.active ? "chip active" : "chip"} onClick={() => setFilters({ ...filters, active: !filters.active })}>Com círculo ativo</button>
-      </div>
-      {showPeople && <Grid title="Pessoas por perto">{people.map((person) => <PersonCard key={person.id} person={person} onPass={() => passPerson(person.id)} onLike={() => likePerson(person)} onSuper={() => { notify(`Super interesse enviado para ${person.name}.`); setModal({ type: "success", title: "Super interesse", body: "Sinal mais forte enviado com discrição. Sem pressão, só intenção clara." }); }} onChat={() => setChat({ title: person.name, subtitle: person.status, image: person.photo, kind: "match" })} />)}</Grid>}
-      {showGroups && <Grid title="Rodas e grupos em destaque">{groups.map((group) => <GroupCard key={group.id} group={group} onDetails={() => setModal({ type: "groupDetails", group })} onRequest={() => requestGroup(group)} onJoin={() => requestGroup(group, true)} onChat={() => setChat({ title: group.name, subtitle: group.status, image: group.photo, kind: "grupo" })} />)}</Grid>}
+      ) : (
+        <EmptyState title="Nenhum perfil com esses filtros" action="Limpar filtros" onClick={() => setFilters([])} />
+      )}
+      <SafetyStrip actions={[["Denunciar", () => notify("Denúncia registrada no modo demo.")], ["Bloquear", () => notify("Perfil bloqueado no modo demo.")]]} />
     </section>
   );
 }
 
-function Grid({ title, children }) {
-  return <div className="block"><h3>{title}</h3><div className="grid">{children}</div></div>;
+function filterPeople(people, filters) {
+  return people.filter((person) => {
+    if (filters.includes("Até 4 km") && person.distance > 4) return false;
+    if (filters.includes("Online agora") && !person.online) return false;
+    if (filters.includes("Rolê tranquilo") && !person.calm) return false;
+    if (filters.includes("Faculdade") && !person.college && !person.tags.includes("Faculdade")) return false;
+    if (filters.includes("Praia") && !person.tags.includes("Praia")) return false;
+    return true;
+  });
 }
 
-function PersonCard({ person, onPass, onLike, onSuper, onChat }) {
+function PersonCard({ person, onLike, onPass, onProfile, onMessage }) {
   return (
-    <article className="card person">
+    <article className="personCard card">
       <img src={person.photo} alt={person.name} />
       <div className="cardBody">
-        <div className="between"><h4>{person.name}, {person.age}</h4><span className="badge">{person.distance}</span></div>
-        <p className="muted">{person.area} · {person.status}</p>
+        <div className="between">
+          <div>
+            <h3>{person.name}, {person.age}</h3>
+            <p className="muted">{person.area} · {person.distance.toFixed(1).replace(".", ",")} km</p>
+          </div>
+          <span className={person.online ? "badge online" : "badge"}>{person.online ? "Online agora" : "Por perto"}</span>
+        </div>
         <p>{person.bio}</p>
-        <div className="tags">{person.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-        <div className="actions"><button onClick={onPass}>Passar</button><button className="primary" onClick={onLike}>Curtir</button><button className="warm" onClick={onSuper}>Super interesse</button><button onClick={onChat}>Mensagem</button></div>
+        <Tags tags={person.tags} />
+        <div className="actions">
+          <button className="secondary" onClick={onPass}>Passar</button>
+          <button className="primary" onClick={onLike}>Curtir</button>
+          <button onClick={onProfile}>Ver perfil</button>
+          <button onClick={onMessage}>Mandar ideia</button>
+        </div>
       </div>
     </article>
   );
 }
 
-function GroupCard({ group, onDetails, onRequest, onJoin, onChat }) {
+function GroupsTab({ groups, filters, setFilters, requestedGroups, setRequestedGroups, setModal, notify }) {
+  const filtered = useMemo(() => filterGroups(groups, filters), [groups, filters]);
+  const requestGroup = (group) => {
+    setRequestedGroups((items) => items.includes(group.id) ? items : [...items, group.id]);
+    notify("Solicitação enviada. O criador do círculo libera o local exato se aceitar.");
+  };
   return (
-    <article className="card groupCard">
-      <img className="groupBanner" src={group.photo} alt={group.name} />
+    <section className="section fade">
+      <Panel title="Grupos e círculos" text="Entre na roda pelo pedido, veja regras e mantenha o local exato privado.">
+        <FilterChips
+          options={["Grupos abertos", "Até 4 km", "Praia", "Universitários", "Hoje", "Mais membros"]}
+          selected={filters}
+          onToggle={(option) => setFilters(toggleOption(filters, option))}
+        />
+      </Panel>
+      <div className="grid groupsGrid">
+        {filtered.map((group) => (
+          <GroupCard key={group.id} group={group} requested={requestedGroups.includes(group.id)} onRequest={() => requestGroup(group)} onDetails={() => setModal({ type: "group", item: group })} />
+        ))}
+      </div>
+      {!filtered.length && <EmptyState title="Nenhum grupo encontrado" action="Limpar filtros" onClick={() => setFilters([])} />}
+    </section>
+  );
+}
+
+function filterGroups(groups, filters) {
+  return groups.filter((group) => {
+    if (filters.includes("Grupos abertos") && !group.open) return false;
+    if (filters.includes("Até 4 km") && group.distance > 4) return false;
+    if (filters.includes("Praia") && !group.tags.includes("Praia")) return false;
+    if (filters.includes("Universitários") && !group.university) return false;
+    if (filters.includes("Hoje") && !group.today) return false;
+    if (filters.includes("Mais membros") && group.members < 18) return false;
+    return true;
+  });
+}
+
+function GroupCard({ group, requested, onRequest, onDetails }) {
+  return (
+    <article className="groupCard card">
+      <img src={group.photo} alt={group.name} />
       <div className="cardBody">
-        <div className="between"><h4>{group.name}</h4><span className="badge">{group.distance}</span></div>
-        <p className="muted">{group.people} pessoas · {group.category} · {group.status}</p>
+        <div className="between">
+          <h3>{group.name}</h3>
+          <span className={group.open ? "badge online" : "badge"}>{group.status}</span>
+        </div>
+        <p className="muted">{group.area} · {group.distance.toFixed(1).replace(".", ",")} km · {group.members} membros</p>
         <p>{group.description}</p>
-        <p className="muted">Criador: {group.creator} · {group.rules}</p>
-        <div className="actions"><button onClick={onDetails}>Ver detalhes</button><button className="primary" onClick={onRequest}>Pedir entrada</button><button className="warm" onClick={onJoin}>Entrar na roda</button><button onClick={onChat}>Conversar</button></div>
+        <Tags tags={group.tags} />
+        <div className="actions">
+          <button onClick={onDetails}>Ver grupo</button>
+          <button className="primary" onClick={onRequest} disabled={requested}>{requested ? "Solicitação enviada" : "Pedir para entrar"}</button>
+        </div>
       </div>
     </article>
   );
 }
 
-function Circles({ circles, setCircles, setModal, setChat, notify }) {
-  const [view, setView] = useState("map");
-  const [form, setForm] = useState({ name: "", description: "", category: "Chill", max: 10, area: "", exact: "", rules: "", photo: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80" });
-  const createCircle = (event) => {
-    event.preventDefault();
-    const circle = { id: `c${Date.now()}`, name: form.name || "Nova roda", people: 1, distance: "0,8 km", category: form.category, status: "Local liberado", creator: "Você", area: form.area || "Área aproximada", exact: form.exact || "Privado", rules: form.rules || "Adultos, respeito e leis locais.", description: form.description || "Roda criada para trocar ideia com calma.", photo: form.photo, x: 28 + Math.random() * 52, y: 24 + Math.random() * 54 };
-    setCircles((list) => [circle, ...list]);
-    setView("map");
-    notify("Círculo criado. Já dá pra chamar a galera.");
-    setModal({ type: "circleDetails", circle });
-  };
-
+function MapTab({ groups, setTab, setModal, requestedGroups }) {
   return (
     <section className="section fade">
-      {view === "create" ? (
-        <form className="formPanel" onSubmit={createCircle}>
-          <button type="button" className="ghost" onClick={() => setView("map")}>Voltar</button>
-          <h2>Criar círculo</h2>
-          <p className="muted">Monte uma roda, esconda o local exato e libere só quando fizer sentido.</p>
-          <div className="formGrid">
-            <label>Nome do círculo<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-            <label>Categoria<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{["Chill", "Conversa", "Rolê", "Tabaco", "Cigarro", "Narguilé", "Acessórios"].map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label>Quantidade máxima<input type="number" value={form.max} onChange={(event) => setForm({ ...form, max: event.target.value })} /></label>
-            <label>Localização aproximada<input value={form.area} onChange={(event) => setForm({ ...form, area: event.target.value })} /></label>
-            <label>Localização exata privada<input value={form.exact} onChange={(event) => setForm({ ...form, exact: event.target.value })} /></label>
-            <label>Foto/banner do círculo<input value={form.photo} onChange={(event) => setForm({ ...form, photo: event.target.value })} /></label>
-            <label className="wide">Descrição<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-            <label className="wide">Regras do círculo<textarea value={form.rules} onChange={(event) => setForm({ ...form, rules: event.target.value })} /></label>
-          </div>
-          <button className="primary big">Criar círculo</button>
-        </form>
-      ) : (
-        <>
-          <div className="mapHeader brandPanel"><div><p className="eyebrow">Círculos próximos</p><h2>Veja rodas por perto. A localização exata só aparece quando for liberada.</h2></div><button className="primary" onClick={() => setView("create")}>Criar círculo</button></div>
-          <div className="mapGrid">
-            <div className="mapMock">
-              <span className="road r1" /><span className="road r2" /><span className="road r3" />
-              {circles.map((circle) => <button key={circle.id} className={`bubble ${circle.status.replaceAll(" ", "").toLowerCase()}`} style={{ left: `${circle.x}%`, top: `${circle.y}%` }} onClick={() => setModal({ type: "circleDetails", circle })}><span>{circle.people}</span>{circle.distance}</button>)}
-            </div>
-            <div className="list">{circles.map((circle) => <CircleCard key={circle.id} circle={circle} setCircles={setCircles} setModal={setModal} setChat={setChat} notify={notify} />)}</div>
-          </div>
-        </>
-      )}
+      <Panel title="Mapa aproximado" text="Sua localização exata nunca é exibida. Os círculos mostram apenas áreas aproximadas.">
+        <button className="secondary" onClick={() => setTab("Grupos")}>Ver lista de grupos</button>
+      </Panel>
+      <div className="mapLayout">
+        <div className="mapMock">
+          <span className="road roadOne" />
+          <span className="road roadTwo" />
+          <span className="road roadThree" />
+          {groups.map((group) => (
+            <button key={group.id} className={requestedGroups.includes(group.id) ? "mapPin requested" : "mapPin"} style={{ left: `${group.x}%`, top: `${group.y}%` }} onClick={() => setModal({ type: "group", item: group })}>
+              <span>{group.members}</span>
+              <small>{group.distance.toFixed(1).replace(".", ",")} km</small>
+            </button>
+          ))}
+        </div>
+        <div className="floatingCards">
+          {groups.slice(0, 5).map((group) => (
+            <article key={group.id} className="floatingCard">
+              <strong>{group.name}</strong>
+              <small>{group.area} · {group.distance.toFixed(1).replace(".", ",")} km</small>
+              <button onClick={() => setModal({ type: "group", item: group })}>Ver círculo</button>
+            </article>
+          ))}
+        </div>
+      </div>
+      <SafetyStrip />
     </section>
   );
 }
 
-function CircleCard({ circle, setCircles, setModal, setChat, notify }) {
-  const update = (status) => setCircles((list) => list.map((item) => item.id === circle.id ? { ...item, status } : item));
-  const enter = () => {
-    const status = circle.status === "Local liberado" ? "Local liberado" : "Solicitado";
-    update(status);
-    notify(circle.status === "Local liberado" ? "Você entrou na roda." : "Pedido de entrada enviado.");
-  };
-  return (
-    <article className="card compact circleCard">
-      <img className="circlePhoto" src={circle.photo} alt={circle.name} />
-      <div className="between"><h4>{circle.name}</h4><span className={`status ${circle.status.replaceAll(" ", "").toLowerCase()}`}>{circle.status}</span></div>
-      <p className="muted">{circle.people} pessoas · {circle.distance} · {circle.category}</p>
-      <p>{circle.description}</p>
-      <p className="muted">Criador: {circle.creator} · Regras: {circle.rules}</p>
-      <div className="actions"><button onClick={() => setModal({ type: "circleDetails", circle })}>Ver detalhes</button><button className="primary" onClick={() => { update("Solicitado"); notify("Pedido enviado ao criador."); }}>Pedir entrada</button><button className="warm" onClick={enter}>Entrar na roda</button><button onClick={() => setChat({ title: circle.creator, subtitle: circle.name, image: circle.photo, kind: "criador" })}>Conversar com criador</button><button onClick={() => setModal({ type: "unlock", circle, onConfirm: () => update("Local liberado") })}>Liberar localização</button><button onClick={() => notify("Gerenciamento mock aberto.")}>Gerenciar círculo</button></div>
-    </article>
-  );
-}
-
-function Accessories({ items, filter, setFilter, query, setQuery, saved, setSaved, setModal, notify }) {
-  const categories = ["Todos", ...new Set(accessoriesSeed.map((item) => item[1]))];
-  const toggleSaved = (item) => {
-    const alreadySaved = saved.some((savedItem) => savedItem[0] === item[0]);
-    setSaved((list) => alreadySaved ? list.filter((savedItem) => savedItem[0] !== item[0]) : [item, ...list]);
-    notify(alreadySaved ? "Removido dos favoritos." : "Acessório salvo pra ver depois.");
+function AccessoriesTab({ products, filters, setFilters, savedProducts, setSavedProducts, setModal, notify }) {
+  const filtered = useMemo(() => filterProducts(products, filters, savedProducts), [products, filters, savedProducts]);
+  const toggleSaved = (product) => {
+    const saved = savedProducts.includes(product.id);
+    setSavedProducts((items) => saved ? items.filter((id) => id !== product.id) : [...items, product.id]);
+    notify(saved ? "Item removido dos salvos." : "Acessório salvo no perfil visitante.");
   };
   return (
     <section className="section fade">
-      <div className="heroPanel brandPanel"><div><p className="eyebrow">Acessórios</p><h2>Sedas, piteiras, isqueiros e utensílios pra deixar o trago mais organizado.</h2><p className="muted">Guia visual para adultos. Sem compra, sem checkout e sem promoção de produtos ilegais.</p></div><input className="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar acessórios" /></div>
-      <div className="scrollChips">{categories.map((category) => <button key={category} className={filter === category ? "chip active" : "chip"} onClick={() => setFilter(category)}>{category}</button>)}</div>
-      <div className="accessoryGrid">{items.map((item) => <AccessoryCard key={item[0]} item={item} saved={saved.some((savedItem) => savedItem[0] === item[0])} onSave={() => toggleSaved(item)} onDetails={() => setModal({ type: "accessory", item, onSave: () => toggleSaved(item) })} />)}</div>
+      <Panel title="Vitrine de acessórios" text="Sedas, piteiras, dichavadores, bandejas e kits em modo visual. Sem venda real e sem checkout.">
+        <FilterChips
+          options={["Sedas", "Piteiras", "Dichavadores", "Bandejas", "Cuia", "Isqueiros", "Kits", "Menor preço", "Mais populares", "Salvos"]}
+          selected={filters}
+          onToggle={(option) => setFilters(toggleOption(filters, option))}
+        />
+      </Panel>
+      <div className="grid productGrid">
+        {filtered.map((product) => (
+          <ProductCard key={product.id} product={product} saved={savedProducts.includes(product.id)} onSave={() => toggleSaved(product)} onDetails={() => setModal({ type: "product", item: product, onSave: () => toggleSaved(product) })} />
+        ))}
+      </div>
+      {!filtered.length && <EmptyState title="Nada por aqui ainda" action="Limpar filtros" onClick={() => setFilters([])} />}
     </section>
   );
 }
 
-function AccessoryCard({ item, saved, onSave, onDetails }) {
+function filterProducts(products, filters, savedProducts) {
+  const categoryFilters = ["Sedas", "Piteiras", "Dichavadores", "Bandejas", "Cuia", "Isqueiros", "Kits"].filter((item) => filters.includes(item));
+  let list = products.filter((product) => {
+    if (categoryFilters.length && !categoryFilters.includes(product.category)) return false;
+    if (filters.includes("Mais populares") && !product.popular) return false;
+    if (filters.includes("Salvos") && !savedProducts.includes(product.id)) return false;
+    return true;
+  });
+  if (filters.includes("Menor preço")) {
+    list = [...list].sort((a, b) => parseMoney(a.price) - parseMoney(b.price));
+  }
+  return list;
+}
+
+function parseMoney(price) {
+  return Number(price.replace("R$ ", "").replace(",", "."));
+}
+
+function ProductCard({ product, saved, onSave, onDetails }) {
   return (
-    <article className="card accessory">
-      <img src={item[4]} alt={item[0]} />
+    <article className="productCard card">
+      <img src={product.image} alt={product.name} />
       <div className="cardBody">
-        <div className="between"><h4>{item[0]}</h4><button className={saved ? "save saved" : "save"} onClick={onSave}>{saved ? "Salvo" : "Salvar"}</button></div>
-        <p className="muted">{item[1]}</p><p>{item[2]}</p>
-        <div className="tags">{item[3].map((tag) => <span key={tag}>{tag}</span>)}</div>
+        <div className="between">
+          <h3>{product.name}</h3>
+          <button className={saved ? "save saved" : "save"} onClick={onSave}>{saved ? "Salvo" : "Salvar"}</button>
+        </div>
+        <p className="muted">{product.category} · {product.price}</p>
+        <p>{product.description}</p>
+        <Tags tags={product.tags} />
         <button onClick={onDetails}>Ver detalhes</button>
       </div>
     </article>
   );
 }
 
-function Profile({ saved, circles, people, notify, setTab }) {
+function ProfileTab({ savedProducts, requestedGroups, setModal, notify, leave }) {
   return (
     <section className="section fade">
-      <div className="profileHero brandPanel"><Logo /><img src="https://randomuser.me/api/portraits/men/36.jpg" alt="Perfil" /><div><p className="eyebrow">Perfil mock</p><h2>Guilherme, 34</h2><p>Adulto, discreto, interessado em círculos pequenos, acessórios legais e privacidade de localização.</p></div></div>
+      <div className="profileHero card">
+        <Logo />
+        <div>
+          <h2>Visitante</h2>
+          <p>Santos, SP · modo visitante</p>
+          <p className="muted">Preferências: praia, rolê tranquilo, grupos abertos e localização aproximada.</p>
+        </div>
+      </div>
       <div className="profileGrid">
-        <Panel title="Preferências"><p>Distância aproximada · círculos adultos · uso legal · privacidade ativa</p><button onClick={() => notify("Editor de perfil mock aberto.")}>Editar perfil</button></Panel>
-        <Panel title="Círculos participando"><p>{circles.filter((circle) => circle.status !== "Bloqueado").length} círculos em andamento</p><button onClick={() => setTab("Círculos")}>Ver círculos</button></Panel>
-        <Panel title="Acessórios salvos"><p>{saved.length || "Nenhum"} item salvo</p>{saved.slice(0, 3).map((item) => <small key={item[0]}>{item[0]}</small>)}</Panel>
-        <Panel title="Matches recentes"><p>{people.filter((person) => person.matched).length} conversas potenciais</p><button onClick={() => notify("Lista de matches mock aberta.")}>Abrir matches</button></Panel>
-        <Panel title="Configurações"><div className="actions vertical">{["Privacidade de localização", "Mostrar distância aproximada", "Usuários bloqueados", "Denunciar problema", "Sair"].map((action) => <button key={action} onClick={() => notify(`${action}: ação mock registrada.`)}>{action}</button>)}</div></Panel>
+        <article className="card profilePanel"><h3>Resumo</h3><p>{requestedGroups.length} solicitações de grupos</p><p>{savedProducts.length} acessórios salvos</p><p>Distância máxima: 6 km</p></article>
+        <article className="card profilePanel"><h3>Privacidade</h3><p>Localização sempre aproximada.</p><p>O local exato só é liberado pelo criador do grupo.</p></article>
+        <article className="card profilePanel"><h3>Configurações</h3><button onClick={() => setModal({ type: "simple", title: "Editar perfil", body: "Edição visual do visitante aberta. Em breve você poderá ajustar foto, bio e interesses." })}>Editar perfil</button><button onClick={() => setModal({ type: "simple", title: "Privacidade", body: "Sua localização exata nunca aparece publicamente neste protótipo." })}>Privacidade</button><button onClick={() => notify("Relato recebido no modo demo.")}>Denunciar problema</button><button onClick={leave}>Sair do modo visitante</button></article>
+        <article className="card profilePanel"><h3>Comunidade</h3><button onClick={() => setModal({ type: "simple", title: "Regras da comunidade", body: "Use com responsabilidade, respeite consentimento, não venda substâncias ilegais e não exponha localização de outras pessoas." })}>Regras da comunidade</button><button onClick={() => notify("Lista de bloqueados aberta no modo demo.")}>Usuários bloqueados</button></article>
       </div>
     </section>
   );
 }
 
-function Panel({ title, children }) {
-  return <article className="card panel"><h4>{title}</h4>{children}</article>;
-}
-
-function Modal({ modal, close, setGroups, setCircles, setChat, notify }) {
-  const confirmUnlock = () => { modal.onConfirm?.(); notify("Local liberado com aviso registrado."); close(); };
+function Panel({ title, text, children }) {
   return (
-    <div className="overlay" onClick={close}><div className="modal" onClick={(event) => event.stopPropagation()}>
-      <button className="x" onClick={close}>×</button>
-      {modal.type === "match" && <><h2>Deu match com {modal.person.name}</h2><img className="modalImg" src={modal.person.photo} alt={modal.person.name} /><p>Vocês curtiram a mesma vibe. Chama no papo e vai com calma.</p><button className="primary" onClick={() => { setChat({ title: modal.person.name, subtitle: "Match recente", image: modal.person.photo, kind: "match" }); close(); }}>Mensagem</button></>}
-      {modal.type === "join" && <><h2>{modal.joined ? "Você entrou na roda" : "Pedido enviado"}</h2><p>{modal.joined ? `Você entrou em ${modal.target}. Se o local ainda estiver bloqueado, fale com o criador.` : `Seu pedido para entrar em ${modal.target} foi registrado. O criador vê seu perfil antes de liberar detalhes.`}</p><button className="primary" onClick={close}>Fechado</button></>}
-      {modal.type === "success" && <><h2>{modal.title}</h2><p>{modal.body}</p><button className="primary" onClick={close}>Fechar</button></>}
-      {modal.type === "groupDetails" && <><img className="modalImg" src={modal.group.photo} alt={modal.group.name} /><h2>{modal.group.name}</h2><p>{modal.group.description}</p><p className="muted">{modal.group.people} pessoas · {modal.group.distance} · {modal.group.category}</p><p>{modal.group.rules}</p><div className="actions"><button className="primary" onClick={() => { setGroups((list) => list.map((group) => group.id === modal.group.id ? { ...group, status: "Solicitado" } : group)); notify("Pedido enviado."); close(); }}>Pedir entrada</button><button className="warm" onClick={() => { setGroups((list) => list.map((group) => group.id === modal.group.id ? { ...group, status: "Em conversa" } : group)); notify("Você entrou na roda."); close(); }}>Entrar na roda</button></div></>}
-      {modal.type === "circleDetails" && <><img className="modalImg" src={modal.circle.photo} alt={modal.circle.name} /><h2>{modal.circle.name}</h2><p>{modal.circle.description}</p><p className="muted">Área: {modal.circle.area} · Local exato: {modal.circle.status === "Local liberado" ? modal.circle.exact : "oculto até liberação"}</p><p>{modal.circle.rules}</p><button className="primary" onClick={() => { setChat({ title: modal.circle.name, subtitle: "Chat do círculo", image: modal.circle.photo, kind: "círculo" }); close(); }}>Conversar</button></>}
-      {modal.type === "unlock" && <><h2>Liberar localização?</h2><p>Compartilhe sua localização exata apenas com pessoas em quem confia.</p><p className="notice">Use com responsabilidade e respeite as leis locais.</p><div className="actions"><button onClick={close}>Voltar</button><button className="warm" onClick={confirmUnlock}>Liberar localização</button></div></>}
-      {modal.type === "accessory" && <><img className="modalImg wideImg" src={modal.item[4]} alt={modal.item[0]} /><h2>{modal.item[0]}</h2><p className="muted">{modal.item[1]}</p><p>{modal.item[2]} Dica: mantenha seus itens limpos, organizados e use apenas conforme as leis locais.</p><p className="notice">Produto destinado apenas a adultos e conforme as leis locais.</p><div className="actions"><button className="primary" onClick={() => { modal.onSave?.(); close(); }}>Salvar nos favoritos</button><button onClick={close}>Voltar</button></div></>}
-    </div></div>
-  );
-}
-
-function Chat({ chat, close }) {
-  const [messages, setMessages] = useState(["Oi. Vi seu perfil e curti o tom da roda.", "A ideia é trocar ideia antes de liberar qualquer detalhe privado."]);
-  const [draft, setDraft] = useState("");
-  const send = () => { if (!draft.trim()) return; setMessages((items) => [...items, draft.trim()]); setDraft(""); };
-  return (
-    <div className="chatPane">
-      <header><button onClick={close}>Voltar</button><div>{chat.image && <img src={chat.image} alt="" />}<strong>{chat.title}</strong><small>{chat.subtitle}</small></div></header>
-      <div className="messages">{messages.map((message, index) => <p key={`${message}-${index}`} className={index % 2 ? "other" : "mine"}>{message}</p>)}</div>
-      <footer><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => event.key === "Enter" && send()} placeholder="Escreva uma mensagem" /><button className="primary" onClick={send}>Enviar</button></footer>
+    <div className="panel">
+      <div>
+        <p className="eyebrow">Smoke Circle</p>
+        <h1>{title}</h1>
+        <p className="muted">{text}</p>
+      </div>
+      {children}
     </div>
   );
+}
+
+function Tags({ tags }) {
+  return <div className="tags">{tags.map((tag) => <span key={tag}>{tag}</span>)}</div>;
+}
+
+function SafetyStrip({ actions = [] }) {
+  return (
+    <div className="safetyStrip">
+      <strong>Privacidade e segurança</strong>
+      <span>Localização sempre aproximada.</span>
+      <span>O local exato só é liberado pelo criador do grupo.</span>
+      <span>Use com responsabilidade e respeite as leis locais.</span>
+      {actions.map(([label, action]) => <button key={label} onClick={action}>{label}</button>)}
+    </div>
+  );
+}
+
+function EmptyState({ title, action, onClick }) {
+  return <div className="emptyState"><h3>{title}</h3><button className="secondary" onClick={onClick}>{action}</button></div>;
+}
+
+function AppModal({ modal, close, notify }) {
+  const item = modal.item;
+  return (
+    <div className="overlay" onClick={close}>
+      <div className="modal" onClick={(event) => event.stopPropagation()}>
+        <button className="close" onClick={close}>×</button>
+        {modal.type === "person" && (
+          <>
+            <img className="modalImg portrait" src={item.photo} alt={item.name} />
+            <h2>{item.name}, {item.age}</h2>
+            <p className="muted">{item.area} · {item.distance.toFixed(1).replace(".", ",")} km</p>
+            <p>{item.details}</p>
+            <Tags tags={item.tags} />
+            <div className="actions"><button className="primary" onClick={() => notify("Você curtiu este perfil")}>Curtir</button><button onClick={() => notify("Usuário bloqueado no modo demo.")}>Bloquear</button><button onClick={() => notify("Denúncia registrada no modo demo.")}>Denunciar</button></div>
+          </>
+        )}
+        {modal.type === "group" && (
+          <>
+            <img className="modalImg" src={item.photo} alt={item.name} />
+            <h2>{item.name}</h2>
+            <p className="muted">{item.area} · {item.distance.toFixed(1).replace(".", ",")} km · {item.members} membros</p>
+            <p>{item.description}</p>
+            <h3>Regras</h3>
+            <ul>{item.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+            <p className="notice">Sua localização exata nunca é exibida. O criador do círculo libera o local exato se aceitar.</p>
+          </>
+        )}
+        {modal.type === "product" && (
+          <>
+            <img className="modalImg" src={item.image} alt={item.name} />
+            <h2>{item.name}</h2>
+            <p className="muted">{item.category} · {item.price}</p>
+            <p>{item.description}</p>
+            <p className="notice">Produto destinado apenas a adultos e conforme as leis locais. Esta vitrine é visual e não possui compra real.</p>
+            <button className="primary" onClick={() => { modal.onSave?.(); notify("Acessório salvo no perfil visitante."); }}>Salvar</button>
+          </>
+        )}
+        {modal.type === "message" && (
+          <>
+            <h2>{modal.title}</h2>
+            <p>{modal.body}</p>
+            <textarea placeholder="Escreva uma mensagem simulada" />
+            <button className="primary" onClick={() => { notify("Mensagem simulada enviada."); close(); }}>Enviar ideia</button>
+          </>
+        )}
+        {modal.type === "simple" && (
+          <>
+            <h2>{modal.title}</h2>
+            <p>{modal.body}</p>
+            <button className="primary" onClick={close}>Entendi</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Toast({ message }) {
+  return <div className="toast">{message}</div>;
 }
 
 createRoot(document.getElementById("root")).render(<App />);
